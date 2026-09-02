@@ -213,13 +213,13 @@ export async function generateNewspaper(news) {
     ctx.strokeStyle = '#191919';
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(100, height - 115);
-    ctx.lineTo(width - 100, height - 115);
+    ctx.moveTo(100, height - 135);
+    ctx.lineTo(width - 100, height - 135);
     ctx.stroke();
 
     ctx.fillStyle = '#111111';
     ctx.font = '18px Georgia';
-    ctx.fillText('THE GOTHAM GAZETTE • GOTHAM CITY • EST. 1939', width / 2, height - 75);
+    ctx.fillText('THE GOTHAM GAZETTE • GOTHAM CITY • EST. 1939', width / 2, height - 85);
 
     return canvas.toBuffer('image/png');
 }
