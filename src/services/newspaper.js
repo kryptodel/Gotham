@@ -29,7 +29,6 @@ function wrapText(ctx, text, maxWidth) {
 
     for (const word of words) {
         const testLine = line ? `${line} ${word}` : word;
-
         const testWidth = ctx.measureText(testLine).width;
 
         if (testWidth > maxWidth && line.length > 0) {
@@ -92,11 +91,12 @@ export async function generateNewspaper(news) {
     ctx.strokeRect(60, 60, width - 120, height - 120);
 
     ctx.fillStyle = '#111111';
-    ctx.textAlign = 'center';
 
+    ctx.textAlign = 'center';
     ctx.font = 'bold 92px Georgia';
     ctx.fillText('THE GOTHAM GAZETTE', width / 2, 160);
 
+    ctx.textAlign = 'center';
     ctx.font = '24px Georgia';
     ctx.fillText('THE CITY NEVER SLEEPS', width / 2, 205);
 
@@ -113,36 +113,76 @@ export async function generateNewspaper(news) {
     });
 
     ctx.font = '20px Georgia';
+
     ctx.textAlign = 'left';
     ctx.fillText(date.toUpperCase(), 110, 275);
+
     ctx.textAlign = 'right';
     ctx.fillText('VOL. 01 — NO. 001', width - 110, 275);
 
-    ctx.font = 'bold 24px Georgia';
     const category = String(news.category || 'GOTHAM NEWS').toUpperCase();
+
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 24px Georgia';
     ctx.fillText(category, width / 2, 335);
 
     const headline = news.headline || 'BREAKING NEWS FROM GOTHAM CITY';
-    let headlineSize = fitHeadline(ctx, headline, 1380, 76, 42);
+
+    ctx.textAlign = 'center';
+
+    const headlineSize = fitHeadline(
+        ctx,
+        headline,
+        1380,
+        76,
+        42
+    );
 
     ctx.font = `bold ${headlineSize}px Georgia`;
-    const headlineLines = wrapText(ctx, headline, 1380);
+
+    const headlineLines = wrapText(
+        ctx,
+        headline,
+        1380
+    );
+
     let headlineY = 430;
 
     for (const line of headlineLines) {
+        ctx.textAlign = 'center';
         ctx.fillText(line, width / 2, headlineY);
         headlineY += headlineSize * 1.15;
     }
 
-    const subtitle = news.subtitle || 'Details continue to emerge as authorities investigate the incident.';
+    const subtitle =
+        news.subtitle ||
+        'Details continue to emerge as authorities investigate the incident.';
+
+    ctx.textAlign = 'center';
     ctx.font = 'italic 30px Georgia';
+
     const subtitleY = headlineY + 15;
-    let subtitleEndY = drawWrappedText(ctx, subtitle, width / 2, subtitleY, 1250, 40);
+
+    const subtitleEndY = drawWrappedText(
+        ctx,
+        subtitle,
+        width / 2,
+        subtitleY,
+        1250,
+        40
+    );
 
     const location = news.location || 'GOTHAM CITY';
+
+    ctx.fillStyle = '#171717';
     ctx.font = 'bold 22px Georgia';
     ctx.textAlign = 'left';
-    ctx.fillText(String(location).toUpperCase(), 120, subtitleEndY + 35);
+
+    ctx.fillText(
+        String(location).toUpperCase(),
+        120,
+        subtitleEndY + 35
+    );
 
     ctx.beginPath();
     ctx.moveTo(110, subtitleEndY + 60);
@@ -157,7 +197,10 @@ export async function generateNewspaper(news) {
     ctx.fillStyle = '#171717';
     ctx.font = '24px Merriweather, Georgia';
 
-    const body = news.body || 'No article content was provided.';
+    const body =
+        news.body ||
+        'No article content was provided.';
+
     const paragraphs = String(body)
         .split(/\n+/)
         .map(p => p.trim())
@@ -168,7 +211,11 @@ export async function generateNewspaper(news) {
     let currentColumn = 'left';
 
     for (let i = 0; i < paragraphs.length; i++) {
-        const lines = wrapText(ctx, paragraphs[i], columnWidth);
+        const lines = wrapText(
+            ctx,
+            paragraphs[i],
+            columnWidth
+        );
 
         if (currentColumn === 'left') {
             for (const line of lines) {
@@ -176,42 +223,77 @@ export async function generateNewspaper(news) {
                     currentColumn = 'right';
                     break;
                 }
+
                 ctx.textAlign = 'left';
-                ctx.fillText(line, leftX, leftY);
+                ctx.fillText(
+                    line,
+                    leftX,
+                    leftY
+                );
+
                 leftY += 36;
             }
-            if (currentColumn === 'left') leftY += 20;
+
+            if (currentColumn === 'left') {
+                leftY += 20;
+            }
         }
 
         if (currentColumn === 'right') {
             for (const line of lines) {
-                if (rightY > height - 300) break;
+                if (rightY > height - 300) {
+                    break;
+                }
+
                 ctx.textAlign = 'left';
-                ctx.fillText(line, rightX, rightY);
+                ctx.fillText(
+                    line,
+                    rightX,
+                    rightY
+                );
+
                 rightY += 36;
             }
+
             rightY += 20;
         }
     }
 
-    const dividerEnd = Math.min(Math.max(leftY, rightY), height - 260);
+    const dividerEnd = Math.min(
+        Math.max(leftY, rightY),
+        height - 260
+    );
+
     ctx.strokeStyle = '#777777';
     ctx.lineWidth = 1;
+
     ctx.beginPath();
     ctx.moveTo(800, bodyY);
     ctx.lineTo(800, dividerEnd);
     ctx.stroke();
 
-    const author = news.author || 'Gotham Gazette Staff';
-    const authorY = Math.min(Math.max(leftY, rightY) + 35, height - 165);
+    const author =
+        news.author ||
+        'Gotham Gazette Staff';
+
+    const authorY = Math.min(
+        Math.max(leftY, rightY) + 35,
+        height - 165
+    );
 
     ctx.fillStyle = '#171717';
     ctx.font = 'italic 20px Georgia';
     ctx.textAlign = 'right';
-    ctx.fillText(`Reported by ${author}`, width - 120, authorY);
+
+    ctx.fillText(
+        `Reported by ${author}`,
+        width - 120,
+        authorY
+    );
 
     ctx.strokeStyle = '#191919';
     ctx.lineWidth = 2;
+
     ctx.beginPath();
     ctx.moveTo(100, height - 135);
     ctx.lineTo(width - 100, height - 135);
@@ -219,7 +301,13 @@ export async function generateNewspaper(news) {
 
     ctx.fillStyle = '#111111';
     ctx.font = '18px Georgia';
-    ctx.fillText('THE GOTHAM GAZETTE • GOTHAM CITY • EST. 1939', width / 2, height - 85);
+    ctx.textAlign = 'center';
+
+    ctx.fillText(
+        'THE GOTHAM GAZETTE • GOTHAM CITY • EST. 1939',
+        width / 2,
+        height - 85
+    );
 
     return canvas.toBuffer('image/png');
-}
+    }
