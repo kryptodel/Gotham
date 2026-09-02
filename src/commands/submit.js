@@ -87,7 +87,7 @@ export default {
             });
 
             await interaction.editReply({
-                content:'**News created successfully!**\n\nHere is the article from **The Gotham Gazette**:',
+                content: '**News created successfully!**\n\nHere is the article from **The Gotham Gazette**:',
                 files: [attachment]
             });
 
