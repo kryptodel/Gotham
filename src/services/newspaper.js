@@ -247,4 +247,4 @@ export async function generateNewspaper(news) {
     ctx.fillText('THE GOTHAM GAZETTE • GOTHAM CITY • EST. 1939', width / 2, height - 75);
 
     return canvas.toBuffer('image/png');
-}
+        }
