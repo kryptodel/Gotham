@@ -149,35 +149,10 @@ export async function generateNewspaper(news) {
     ctx.lineTo(width - 110, subtitleEndY + 60);
     ctx.stroke();
 
-    const image1 = news.image1 || null;
-    const image2 = news.image2 || null;
-
-    let imageY = subtitleEndY + 110;
-    const imageWidth = 310;
-    const imageHeight = 310;
-    const imgY = imageY + 15;
-
-    ctx.fillStyle = '#171717';
-    ctx.font = 'bold 18px Merriweather, Georgia';
-    ctx.textAlign = 'center';
-
-    if (image1) {
-        ctx.fillText('Image 1', imageWidth / 2, imageY);
-        ctx.fillRect(70, imgY, imageWidth, imageHeight);
-        ctx.drawImage(image1, 80, imgY + 10, imageWidth - 20, imageHeight - 20);
-        imageY += 340;
-    }
-
-    if (image2) {
-        ctx.fillText('Image 2', imageWidth + 390, imageY);
-        ctx.fillRect(470, imgY, imageWidth, imageHeight);
-        ctx.drawImage(image2, 480, imgY + 10, imageWidth - 20, imageHeight - 20);
-    }
-
     const columnWidth = 650;
     const leftX = 120;
     const rightX = 830;
-    const bodyY = imageY + 80;
+    const bodyY = subtitleEndY + 110;
 
     ctx.fillStyle = '#171717';
     ctx.font = '24px Merriweather, Georgia';
@@ -247,4 +222,4 @@ export async function generateNewspaper(news) {
     ctx.fillText('THE GOTHAM GAZETTE • GOTHAM CITY • EST. 1939', width / 2, height - 75);
 
     return canvas.toBuffer('image/png');
-        }
+}
