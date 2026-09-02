@@ -1,13 +1,14 @@
 {
   "name": "gotham-gazette",
   "version": "1.0.0",
-  "description": "Gotham Gazette Discord News Bot",
+  "description": "Gotham Gazette - AI-powered newspaper Discord bot",
   "main": "src/index.js",
+  "type": "module",
   "scripts": {
-    "start": "node src/index.js",
-    "dev": "node --watch src/index.js"
+    "start": "node src/index.js"
   },
   "dependencies": {
+    "canvas": "^2.11.2",
     "discord.js": "^14.24.0",
     "dotenv": "^17.2.1",
     "groq-sdk": "^0.30.0"
