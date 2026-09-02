@@ -37,20 +37,6 @@ export default {
                 .setName('details')
                 .setDescription('Provide the details of the event.')
                 .setRequired(true)
-        )
-
-        .addAttachmentOption(option =>
-            option
-                .setName('image1')
-                .setDescription('First image from gallery (required)')
-                .setRequired(true)
-        )
-
-        .addAttachmentOption(option =>
-            option
-                .setName('image2')
-                .setDescription('Second image from gallery (optional)')
-                .setRequired(false)
         ),
 
     async execute(interaction) {
@@ -62,22 +48,11 @@ export default {
             const involved = interaction.options.getString('involved');
             const details = interaction.options.getString('details');
 
-            const image1Attachment = interaction.options.getAttachment('image1');
-            const image2Attachment = interaction.options.getAttachment('image2');
-
-            if (!image1Attachment) {
-                return await interaction.editReply({
-                    content: '❌ You need to upload at least the first image from the gallery!'
-                });
-            }
-
             const news = await generateNews({
                 event,
                 location,
                 involved,
-                details,
-                image1Url: image1Attachment.url,
-                image2Url: image2Attachment?.url || null
+                details
             });
 
             const newspaper = await generateNewspaper(news);
@@ -87,7 +62,7 @@ export default {
             });
 
             await interaction.editReply({
-                content: '**News created successfully!**\n\nHere is the article from **The Gotham Gazette**:',
+                content: '📰 **News created successfully!**\n\nHere is the article from **The Gotham Gazette**:',
                 files: [attachment]
             });
 
