@@ -63,7 +63,7 @@ Return ONLY valid JSON in exactly this format:
     const completion =
         await groq.chat.completions.create({
             model:
-                'llama-3.3-70b-versatile',
+            'openai/gpt-oss-120b',
 
             messages: [
                 {
