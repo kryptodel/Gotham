@@ -8,7 +8,9 @@ export async function generateNews({
     event,
     location,
     involved,
-    details
+    details,
+    image1Url,
+    image2Url
 }) {
     const prompt = `
 You are the Editor-in-Chief of the Gotham Gazette,
@@ -16,6 +18,7 @@ a fictional newspaper based in Gotham City.
 
 Your job is to transform the information provided by
 the user into a professional fictional newspaper article.
+Include the two provided images in the article.
 
 The article must feel like it was written by an actual
 Gotham journalist.
