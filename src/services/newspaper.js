@@ -38,17 +38,11 @@ async function loadRemoteImage(url) {
     return loadImage(buffer);
 }
 
-function wrapText(
-    ctx,
-    text,
-    maxWidth
-) {
+function wrapText(ctx, text, maxWidth) {
     const words =
-        String(text)
-            .split(/\s+/);
+        String(text).split(/\s+/);
 
     const lines = [];
-
     let line = '';
 
     for (const word of words) {
@@ -205,9 +199,7 @@ function fitText(
             `bold ${size}px Georgia`;
 
         if (
-            ctx.measureText(
-                text
-            ).width <=
+            ctx.measureText(text).width <=
             maxWidth
         ) {
             break;
@@ -217,6 +209,106 @@ function fitText(
     }
 
     return size;
+}
+
+function splitTextIntoChunks(
+    ctx,
+    text,
+    width,
+    maxHeight,
+    lineHeight
+) {
+    const words =
+        String(text)
+            .split(/\s+/)
+            .filter(Boolean);
+
+    const chunks = [];
+
+    let current = '';
+    let currentHeight = 0;
+
+    for (const word of words) {
+        const test =
+            current
+                ? `${current} ${word}`
+                : word;
+
+        const testLines =
+            wrapText(
+                ctx,
+                test,
+                width
+            );
+
+        const testHeight =
+            testLines.length *
+            lineHeight;
+
+        if (
+            testHeight > maxHeight &&
+            current
+        ) {
+            chunks.push(current);
+
+            current = word;
+
+            currentHeight =
+                lineHeight;
+        } else {
+            current = test;
+
+            currentHeight =
+                testHeight;
+        }
+    }
+
+    if (current) {
+        chunks.push(current);
+    }
+
+    return chunks;
+}
+
+function drawColumnText(
+    ctx,
+    text,
+    x,
+    y,
+    width,
+    bottom,
+    lineHeight
+) {
+    const lines =
+        wrapText(
+            ctx,
+            text,
+            width
+        );
+
+    let index = 0;
+
+    while (
+        index < lines.length &&
+        y <= bottom
+    ) {
+        ctx.fillText(
+            lines[index],
+            x,
+            y
+        );
+
+        y += lineHeight;
+        index++;
+    }
+
+    return {
+        y,
+        remaining:
+            lines
+                .slice(index)
+                .join(' ')
+    };
 }
 
 export async function generateNewspaper(
@@ -262,10 +354,8 @@ export async function generateNewspaper(
     ctx.strokeStyle =
         '#222222';
 
-    ctx.textBaseline =
-        'alphabetic';
-
     const margin = 90;
+
     const contentWidth =
         width -
         margin * 2;
@@ -345,7 +435,7 @@ export async function generateNewspaper(
             headline,
             590,
             48,
-            32
+            30
         );
 
     ctx.font =
@@ -354,15 +444,12 @@ export async function generateNewspaper(
     ctx.textAlign =
         'left';
 
-    const headlineY =
-        405;
-
     const headlineEnd =
         drawText(
             ctx,
             headline,
             margin,
-            headlineY,
+            390,
             590,
             headlineSize * 1.18,
             4
@@ -376,9 +463,6 @@ export async function generateNewspaper(
         margin,
         headlineEnd + 25
     );
-
-    ctx.font =
-        '18px Merriweather, Georgia';
 
     const body =
         news.body ||
@@ -397,15 +481,19 @@ export async function generateNewspaper(
         paragraphs[0] ||
         body;
 
-    drawText(
-        ctx,
-        firstParagraph,
-        margin,
-        headlineEnd + 75,
-        590,
-        29,
-        9
-    );
+    ctx.font =
+        '18px Merriweather, Georgia';
+
+    const firstTextEnd =
+        drawText(
+            ctx,
+            firstParagraph,
+            margin,
+            headlineEnd + 75,
+            590,
+            29,
+            10
+        );
 
     const mainImageX =
         740;
@@ -428,19 +516,26 @@ export async function generateNewspaper(
         mainImageHeight
     );
 
+    const firstSectionEnd =
+        Math.max(
+            mainImageY +
+                mainImageHeight,
+            firstTextEnd
+        );
+
+    const firstDividerY =
+        firstSectionEnd + 45;
+
     drawRule(
         ctx,
         margin,
-        900,
+        firstDividerY,
         width - margin,
         2
     );
 
-    const secondImageX =
-        margin;
-
     const secondImageY =
-        940;
+        firstDividerY + 40;
 
     const secondImageWidth =
         570;
@@ -451,7 +546,7 @@ export async function generateNewspaper(
     drawImageCover(
         ctx,
         image2,
-        secondImageX,
+        margin,
         secondImageY,
         secondImageWidth,
         secondImageHeight
@@ -466,7 +561,7 @@ export async function generateNewspaper(
     const secondTitle =
         paragraphs[1] ||
         news.subtitle ||
-        'Developing story in Gotham City.';
+        'The latest developments from Gotham City.';
 
     ctx.font =
         'bold 40px Georgia';
@@ -482,7 +577,7 @@ export async function generateNewspaper(
             secondImageY + 60,
             secondTextWidth,
             47,
-            3
+            4
         );
 
     ctx.font =
@@ -494,33 +589,59 @@ export async function generateNewspaper(
         secondTitleEnd + 10
     );
 
-    const secondBody =
+    const remainingParagraphs =
         paragraphs
             .slice(2)
-            .join(' ') ||
+            .join(' ');
+
+    const secondBody =
+        remainingParagraphs ||
+        firstParagraph ||
         news.subtitle ||
         'More details continue to emerge as the story develops.';
 
     ctx.font =
         '18px Merriweather, Georgia';
 
-    drawText(
-        ctx,
-        secondBody,
-        secondTextX,
-        secondTitleEnd + 55,
-        secondTextWidth,
-        29,
-        8
-    );
+    const secondBodyEnd =
+        drawText(
+            ctx,
+            secondBody,
+            secondTextX,
+            secondTitleEnd + 55,
+            secondTextWidth,
+            29,
+            11
+        );
+
+    const secondSectionEnd =
+        Math.max(
+            secondImageY +
+                secondImageHeight,
+            secondBodyEnd
+        );
+
+    const secondDividerY =
+        secondSectionEnd + 45;
 
     drawRule(
         ctx,
         margin,
-        1380,
+        secondDividerY,
         width - margin,
         2
     );
+
+    const bottomTop =
+        secondDividerY + 45;
+
+    const footerLineY =
+        height - 125;
+
+    const bottomHeight =
+        footerLineY -
+        bottomTop -
+        35;
 
     const columnGap =
         45;
@@ -530,9 +651,6 @@ export async function generateNewspaper(
             contentWidth -
             columnGap * 2
         ) / 3;
-
-    const columnY =
-        1445;
 
     const columnX = [
         margin,
@@ -544,64 +662,81 @@ export async function generateNewspaper(
                 columnGap) * 2
     ];
 
-    const blocks = [
-        {
-            title:
-                'CITY WATCH',
-            text:
-                paragraphs[3] ||
-                `Authorities in ${news.location || 'Gotham City'} continue to monitor the situation.`
-        },
-        {
-            title:
-                'THE LATEST',
-            text:
-                paragraphs[4] ||
-                'Officials have not yet released additional information regarding the developing story.'
-        },
-        {
-            title:
-                'GAZETTE REPORT',
-            text:
-                `Reported by ${news.author || 'Gotham Gazette Staff'}. The Gazette will continue following the story.`
-        }
+    const bottomTitleY =
+        bottomTop + 5;
+
+    const columnTextY =
+        bottomTop + 65;
+
+    const titles = [
+        'CITY WATCH',
+        'THE LATEST',
+        'GAZETTE REPORT'
     ];
 
-    for (
-        let i = 0;
-        i < 3;
-        i++
-    ) {
-        ctx.textAlign =
-            'left';
+    const sourceText =
+        [
+            firstParagraph,
+            paragraphs
+                .slice(1)
+                .join(' '),
+            `Reported by ${news.author || 'Gotham Gazette Staff'}.`
+        ]
+            .filter(Boolean)
+            .join(' ');
 
+    ctx.font =
+        'bold 31px Georgia';
+
+    ctx.textAlign =
+        'left';
+
+    for (let i = 0; i < 3; i++) {
+        ctx.fillText(
+            titles[i],
+            columnX[i],
+            bottomTitleY
+        );
+    }
+
+    ctx.font =
+        '17px Merriweather, Georgia';
+
+    let remaining =
+        sourceText;
+
+    for (let i = 0; i < 3; i++) {
+        const result =
+            drawColumnText(
+                ctx,
+                remaining,
+                columnX[i],
+                columnTextY,
+                columnWidth,
+                bottomTop +
+                    bottomHeight,
+                27
+            );
+
+        remaining =
+            result.remaining;
+    }
+
+    if (remaining) {
         ctx.font =
-            'bold 31px Georgia';
+            'italic 16px Georgia';
 
         ctx.fillText(
-            blocks[i].title,
-            columnX[i],
-            columnY
-        );
-
-        ctx.font =
-            '17px Merriweather, Georgia';
-
-        drawText(
-            ctx,
-            blocks[i].text,
-            columnX[i],
-            columnY + 55,
-            columnWidth,
-            27,
-            7
+            'Continued in the next edition.',
+            columnX[2],
+            footerLineY - 20
         );
     }
 
     drawRule(
         ctx,
         margin,
-        height - 125,
+        footerLineY,
         width - margin,
         2
     );
@@ -621,4 +756,4 @@ export async function generateNewspaper(
     return canvas.toBuffer(
         'image/png'
     );
-}
+        }
