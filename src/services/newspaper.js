@@ -1,6 +1,7 @@
 import {
     createCanvas,
-    registerFont
+    registerFont,
+    loadImage
 } from 'canvas';
 
 import fs from 'fs';
@@ -21,17 +22,46 @@ if (fs.existsSync(fontPath)) {
     });
 }
 
-function wrapText(ctx, text, maxWidth) {
-    const words = String(text).split(/\s+/);
+async function loadRemoteImage(url) {
+    const response = await fetch(url);
+
+    if (!response.ok) {
+        throw new Error(
+            `Failed to download image: ${response.status}`
+        );
+    }
+
+    const buffer = Buffer.from(
+        await response.arrayBuffer()
+    );
+
+    return loadImage(buffer);
+}
+
+function wrapText(
+    ctx,
+    text,
+    maxWidth
+) {
+    const words =
+        String(text)
+            .split(/\s+/);
+
     const lines = [];
 
     let line = '';
 
     for (const word of words) {
-        const testLine = line ? `${line} ${word}` : word;
-        const testWidth = ctx.measureText(testLine).width;
+        const testLine =
+            line
+                ? `${line} ${word}`
+                : word;
 
-        if (testWidth > maxWidth && line.length > 0) {
+        if (
+            ctx.measureText(testLine).width >
+                maxWidth &&
+            line
+        ) {
             lines.push(line);
             line = word;
         } else {
@@ -46,24 +76,140 @@ function wrapText(ctx, text, maxWidth) {
     return lines;
 }
 
-function drawWrappedText(ctx, text, x, y, maxWidth, lineHeight) {
-    const lines = wrapText(ctx, text, maxWidth);
+function drawText(
+    ctx,
+    text,
+    x,
+    y,
+    width,
+    lineHeight,
+    maxLines = Infinity
+) {
+    const lines =
+        wrapText(
+            ctx,
+            text,
+            width
+        );
 
-    for (const line of lines) {
-        ctx.fillText(line, x, y);
+    const visibleLines =
+        lines.slice(
+            0,
+            maxLines
+        );
+
+    for (const line of visibleLines) {
+        ctx.fillText(
+            line,
+            x,
+            y
+        );
+
         y += lineHeight;
     }
 
     return y;
 }
 
-function fitHeadline(ctx, text, maxWidth, startSize, minSize) {
-    let size = startSize;
+function drawImageCover(
+    ctx,
+    image,
+    x,
+    y,
+    width,
+    height
+) {
+    const scale =
+        Math.max(
+            width / image.width,
+            height / image.height
+        );
 
-    while (size > minSize) {
-        ctx.font = `bold ${size}px Georgia`;
+    const drawWidth =
+        image.width * scale;
 
-        if (ctx.measureText(text).width <= maxWidth) {
+    const drawHeight =
+        image.height * scale;
+
+    const drawX =
+        x +
+        (width - drawWidth) / 2;
+
+    const drawY =
+        y +
+        (height - drawHeight) / 2;
+
+    ctx.save();
+
+    ctx.beginPath();
+
+    ctx.rect(
+        x,
+        y,
+        width,
+        height
+    );
+
+    ctx.clip();
+
+    ctx.drawImage(
+        image,
+        drawX,
+        drawY,
+        drawWidth,
+        drawHeight
+    );
+
+    ctx.restore();
+}
+
+function drawRule(
+    ctx,
+    x1,
+    y,
+    x2,
+    lineWidth = 2
+) {
+    ctx.lineWidth =
+        lineWidth;
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+        x1,
+        y
+    );
+
+    ctx.lineTo(
+        x2,
+        y
+    );
+
+    ctx.stroke();
+}
+
+function fitText(
+    ctx,
+    text,
+    maxWidth,
+    startSize,
+    minSize
+) {
+    let size =
+        startSize;
+
+    while (
+        size > minSize
+    ) {
+        ctx.font =
+            `bold ${size}px Georgia`;
+
+        if (
+            ctx.measureText(
+                text
+            ).width <=
+            maxWidth
+        ) {
             break;
         }
 
@@ -73,241 +219,406 @@ function fitHeadline(ctx, text, maxWidth, startSize, minSize) {
     return size;
 }
 
-export async function generateNewspaper(news) {
+export async function generateNewspaper(
+    news,
+    image1Url,
+    image2Url
+) {
     const width = 1600;
     const height = 2200;
 
-    const canvas = createCanvas(width, height);
-    const ctx = canvas.getContext('2d');
+    const canvas =
+        createCanvas(
+            width,
+            height
+        );
 
-    ctx.fillStyle = '#f1ead8';
-    ctx.fillRect(0, 0, width, height);
+    const ctx =
+        canvas.getContext('2d');
 
-    ctx.strokeStyle = '#191919';
-    ctx.lineWidth = 6;
-    ctx.strokeRect(45, 45, width - 90, height - 90);
+    const image1 =
+        await loadRemoteImage(
+            image1Url
+        );
 
-    ctx.lineWidth = 2;
-    ctx.strokeRect(60, 60, width - 120, height - 120);
+    const image2 =
+        await loadRemoteImage(
+            image2Url
+        );
 
-    ctx.fillStyle = '#111111';
+    ctx.fillStyle =
+        '#ffffff';
 
-    ctx.textAlign = 'center';
-    ctx.font = 'bold 92px Georgia';
-    ctx.fillText('THE GOTHAM GAZETTE', width / 2, 160);
-
-    ctx.textAlign = 'center';
-    ctx.font = '24px Georgia';
-    ctx.fillText('THE CITY NEVER SLEEPS', width / 2, 205);
-
-    ctx.beginPath();
-    ctx.moveTo(100, 235);
-    ctx.lineTo(width - 100, 235);
-    ctx.stroke();
-
-    const today = new Date();
-    const date = today.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-    });
-
-    ctx.font = '20px Georgia';
-
-    ctx.textAlign = 'left';
-    ctx.fillText(date.toUpperCase(), 110, 275);
-
-    ctx.textAlign = 'right';
-    ctx.fillText('VOL. 01 — NO. 001', width - 110, 275);
-
-    const category = String(news.category || 'GOTHAM NEWS').toUpperCase();
-
-    ctx.textAlign = 'center';
-    ctx.font = 'bold 24px Georgia';
-    ctx.fillText(category, width / 2, 335);
-
-    const headline = news.headline || 'BREAKING NEWS FROM GOTHAM CITY';
-
-    ctx.textAlign = 'center';
-
-    const headlineSize = fitHeadline(
-        ctx,
-        headline,
-        1380,
-        76,
-        42
+    ctx.fillRect(
+        0,
+        0,
+        width,
+        height
     );
 
-    ctx.font = `bold ${headlineSize}px Georgia`;
+    ctx.fillStyle =
+        '#111111';
 
-    const headlineLines = wrapText(
-        ctx,
-        headline,
-        1380
-    );
+    ctx.strokeStyle =
+        '#222222';
 
-    let headlineY = 430;
+    ctx.textBaseline =
+        'alphabetic';
 
-    for (const line of headlineLines) {
-        ctx.textAlign = 'center';
-        ctx.fillText(line, width / 2, headlineY);
-        headlineY += headlineSize * 1.15;
-    }
+    const margin = 90;
+    const contentWidth =
+        width -
+        margin * 2;
 
-    const subtitle =
-        news.subtitle ||
-        'Details continue to emerge as authorities investigate the incident.';
+    const today =
+        new Date();
 
-    ctx.textAlign = 'center';
-    ctx.font = 'italic 30px Georgia';
+    const date =
+        today.toLocaleDateString(
+            'en-US',
+            {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            }
+        );
 
-    const subtitleY = headlineY + 15;
+    ctx.font =
+        '22px Georgia';
 
-    const subtitleEndY = drawWrappedText(
-        ctx,
-        subtitle,
-        width / 2,
-        subtitleY,
-        1250,
-        40
-    );
-
-    const location = news.location || 'GOTHAM CITY';
-
-    ctx.fillStyle = '#171717';
-    ctx.font = 'bold 22px Georgia';
-    ctx.textAlign = 'left';
+    ctx.textAlign =
+        'left';
 
     ctx.fillText(
-        String(location).toUpperCase(),
-        120,
-        subtitleEndY + 35
+        `ISSUE, ${date.toUpperCase()}`,
+        margin,
+        105
     );
 
-    ctx.beginPath();
-    ctx.moveTo(110, subtitleEndY + 60);
-    ctx.lineTo(width - 110, subtitleEndY + 60);
-    ctx.stroke();
+    ctx.textAlign =
+        'right';
 
-    const columnWidth = 650;
-    const leftX = 120;
-    const rightX = 830;
-    const bodyY = subtitleEndY + 110;
+    ctx.fillText(
+        String(
+            news.category ||
+            'NEWS'
+        ).toUpperCase(),
+        width - margin,
+        105
+    );
 
-    ctx.fillStyle = '#171717';
-    ctx.font = '24px Merriweather, Georgia';
+    drawRule(
+        ctx,
+        margin,
+        125,
+        width - margin,
+        2
+    );
+
+    ctx.textAlign =
+        'center';
+
+    ctx.font =
+        'bold 108px Georgia';
+
+    ctx.fillText(
+        'GOTHAM GAZETTE',
+        width / 2,
+        250
+    );
+
+    drawRule(
+        ctx,
+        margin,
+        290,
+        width - margin,
+        2
+    );
+
+    const headline =
+        news.headline ||
+        'BREAKING NEWS FROM GOTHAM CITY';
+
+    const headlineSize =
+        fitText(
+            ctx,
+            headline,
+            590,
+            48,
+            32
+        );
+
+    ctx.font =
+        `bold ${headlineSize}px Georgia`;
+
+    ctx.textAlign =
+        'left';
+
+    const headlineY =
+        405;
+
+    const headlineEnd =
+        drawText(
+            ctx,
+            headline,
+            margin,
+            headlineY,
+            590,
+            headlineSize * 1.18,
+            4
+        );
+
+    ctx.font =
+        'bold 20px Georgia';
+
+    ctx.fillText(
+        date,
+        margin,
+        headlineEnd + 25
+    );
+
+    ctx.font =
+        '18px Merriweather, Georgia';
 
     const body =
         news.body ||
         'No article content was provided.';
 
-    const paragraphs = String(body)
-        .split(/\n+/)
-        .map(p => p.trim())
-        .filter(Boolean);
+    const paragraphs =
+        String(body)
+            .split(/\n+/)
+            .map(
+                paragraph =>
+                    paragraph.trim()
+            )
+            .filter(Boolean);
 
-    let leftY = bodyY;
-    let rightY = bodyY;
-    let currentColumn = 'left';
+    const firstParagraph =
+        paragraphs[0] ||
+        body;
 
-    for (let i = 0; i < paragraphs.length; i++) {
-        const lines = wrapText(
+    drawText(
+        ctx,
+        firstParagraph,
+        margin,
+        headlineEnd + 75,
+        590,
+        29,
+        9
+    );
+
+    const mainImageX =
+        740;
+
+    const mainImageY =
+        350;
+
+    const mainImageWidth =
+        770;
+
+    const mainImageHeight =
+        500;
+
+    drawImageCover(
+        ctx,
+        image1,
+        mainImageX,
+        mainImageY,
+        mainImageWidth,
+        mainImageHeight
+    );
+
+    drawRule(
+        ctx,
+        margin,
+        900,
+        width - margin,
+        2
+    );
+
+    const secondImageX =
+        margin;
+
+    const secondImageY =
+        940;
+
+    const secondImageWidth =
+        570;
+
+    const secondImageHeight =
+        390;
+
+    drawImageCover(
+        ctx,
+        image2,
+        secondImageX,
+        secondImageY,
+        secondImageWidth,
+        secondImageHeight
+    );
+
+    const secondTextX =
+        720;
+
+    const secondTextWidth =
+        790;
+
+    const secondTitle =
+        paragraphs[1] ||
+        news.subtitle ||
+        'Developing story in Gotham City.';
+
+    ctx.font =
+        'bold 40px Georgia';
+
+    ctx.textAlign =
+        'left';
+
+    const secondTitleEnd =
+        drawText(
             ctx,
-            paragraphs[i],
-            columnWidth
+            secondTitle,
+            secondTextX,
+            secondImageY + 60,
+            secondTextWidth,
+            47,
+            3
         );
 
-        if (currentColumn === 'left') {
-            for (const line of lines) {
-                if (leftY > height - 300) {
-                    currentColumn = 'right';
-                    break;
-                }
-
-                ctx.textAlign = 'left';
-                ctx.fillText(
-                    line,
-                    leftX,
-                    leftY
-                );
-
-                leftY += 36;
-            }
-
-            if (currentColumn === 'left') {
-                leftY += 20;
-            }
-        }
-
-        if (currentColumn === 'right') {
-            for (const line of lines) {
-                if (rightY > height - 300) {
-                    break;
-                }
-
-                ctx.textAlign = 'left';
-                ctx.fillText(
-                    line,
-                    rightX,
-                    rightY
-                );
-
-                rightY += 36;
-            }
-
-            rightY += 20;
-        }
-    }
-
-    const dividerEnd = Math.min(
-        Math.max(leftY, rightY),
-        height - 260
-    );
-
-    ctx.strokeStyle = '#777777';
-    ctx.lineWidth = 1;
-
-    ctx.beginPath();
-    ctx.moveTo(800, bodyY);
-    ctx.lineTo(800, dividerEnd);
-    ctx.stroke();
-
-    const author =
-        news.author ||
-        'Gotham Gazette Staff';
-
-    const authorY = Math.min(
-        Math.max(leftY, rightY) + 35,
-        height - 165
-    );
-
-    ctx.fillStyle = '#171717';
-    ctx.font = 'italic 20px Georgia';
-    ctx.textAlign = 'right';
+    ctx.font =
+        'bold 19px Georgia';
 
     ctx.fillText(
-        `Reported by ${author}`,
-        width - 120,
-        authorY
+        date,
+        secondTextX,
+        secondTitleEnd + 10
     );
 
-    ctx.strokeStyle = '#191919';
-    ctx.lineWidth = 2;
+    const secondBody =
+        paragraphs
+            .slice(2)
+            .join(' ') ||
+        news.subtitle ||
+        'More details continue to emerge as the story develops.';
 
-    ctx.beginPath();
-    ctx.moveTo(100, height - 135);
-    ctx.lineTo(width - 100, height - 135);
-    ctx.stroke();
+    ctx.font =
+        '18px Merriweather, Georgia';
 
-    ctx.fillStyle = '#111111';
-    ctx.font = '18px Georgia';
-    ctx.textAlign = 'center';
+    drawText(
+        ctx,
+        secondBody,
+        secondTextX,
+        secondTitleEnd + 55,
+        secondTextWidth,
+        29,
+        8
+    );
+
+    drawRule(
+        ctx,
+        margin,
+        1380,
+        width - margin,
+        2
+    );
+
+    const columnGap =
+        45;
+
+    const columnWidth =
+        (
+            contentWidth -
+            columnGap * 2
+        ) / 3;
+
+    const columnY =
+        1445;
+
+    const columnX = [
+        margin,
+        margin +
+            columnWidth +
+            columnGap,
+        margin +
+            (columnWidth +
+                columnGap) * 2
+    ];
+
+    const blocks = [
+        {
+            title:
+                'CITY WATCH',
+            text:
+                paragraphs[3] ||
+                `Authorities in ${news.location || 'Gotham City'} continue to monitor the situation.`
+        },
+        {
+            title:
+                'THE LATEST',
+            text:
+                paragraphs[4] ||
+                'Officials have not yet released additional information regarding the developing story.'
+        },
+        {
+            title:
+                'GAZETTE REPORT',
+            text:
+                `Reported by ${news.author || 'Gotham Gazette Staff'}. The Gazette will continue following the story.`
+        }
+    ];
+
+    for (
+        let i = 0;
+        i < 3;
+        i++
+    ) {
+        ctx.textAlign =
+            'left';
+
+        ctx.font =
+            'bold 31px Georgia';
+
+        ctx.fillText(
+            blocks[i].title,
+            columnX[i],
+            columnY
+        );
+
+        ctx.font =
+            '17px Merriweather, Georgia';
+
+        drawText(
+            ctx,
+            blocks[i].text,
+            columnX[i],
+            columnY + 55,
+            columnWidth,
+            27,
+            7
+        );
+    }
+
+    drawRule(
+        ctx,
+        margin,
+        height - 125,
+        width - margin,
+        2
+    );
+
+    ctx.textAlign =
+        'center';
+
+    ctx.font =
+        '16px Georgia';
 
     ctx.fillText(
         'THE GOTHAM GAZETTE • GOTHAM CITY • EST. 1939',
         width / 2,
-        height - 85
+        height - 75
     );
 
-    return canvas.toBuffer('image/png');
-    }
+    return canvas.toBuffer(
+        'image/png'
+    );
+}
